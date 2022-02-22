@@ -1,0 +1,15 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: red-packets
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    name: defaultDataSource
+    password: 1
+    url: jdbc:mysql://localhost:3306/red_packets?serverTimezone=UTC
+    username: root
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    database: 3
