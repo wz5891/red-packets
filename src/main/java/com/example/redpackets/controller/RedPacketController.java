@@ -22,7 +22,7 @@ public class RedPacketController {
     @Resource
     private IRedPacketService redPacketService;
 
-    @PostMapping(value = "/red/packet/hand/out", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/red/packet/hand/out", consumes = MediaType.APPLICATION_JSON_VALUE,produces="application/json;charset=UTF-8")
     public BaseResponse handOut(@Validated @RequestBody RedPacketDto dto, BindingResult result) {
         if (result.hasErrors()) {
             return new BaseResponse(StatusCode.INVALID_PARAMS);
@@ -37,7 +37,7 @@ public class RedPacketController {
         return response;
     }
 
-    @GetMapping("/red/packet/rob")
+    @GetMapping(value = "/red/packet/rob",produces="application/json;charset=UTF-8")
     public BaseResponse rob(@RequestParam("userId") Integer userId,@RequestParam("redPacket") String redPacket) {
         BaseResponse response = new BaseResponse(StatusCode.SUCCESS);
 
