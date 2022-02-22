@@ -62,23 +62,30 @@ public class RedPacketService implements IRedPacketService {
         Boolean res = click(redPacket);
 
         if (res) {
-            // 拆红包，从随机金额列表中弹出一个随机金额
-            Object value = redisTemplate.opsForList().rightPop(redPacket);
-            if (value != null) {
-                log.info("用户抢到红包了，userId=[{}],redPacket=[{}],amount=[{}]", userId, redPacket, value);
-                // 当前用户抢到一个红包，更新缓存，并记录到数据库
-                String redPacketTotalKey = redPacket + ":total";
-                // 更新缓存中剩余红包个数
-                Integer curTotal = valueOperations.get(redPacketTotalKey) != null ? (Integer) valueOperations.get(redPacketTotalKey) : 0;
-                valueOperations.set(redPacketTotalKey, curTotal - 1);
+            // 上分布式锁
+            String lockKey = redPacket + ":" + userId + ":lock";
+            Boolean lock = valueOperations.setIfAbsent(lockKey, redPacket);
+            redisTemplate.expire(lockKey, 24L, TimeUnit.HOURS);
 
-                // 将当前抢到红包的用户设置到缓存，用于表示当前用户已经抢过红包了
-                valueOperations.set(redPacket + ":" + userId + ":rob", value, 24L, TimeUnit.HOURS);
+            if (lock) {
+                // 拆红包，从随机金额列表中弹出一个随机金额
+                Object value = redisTemplate.opsForList().rightPop(redPacket);
+                if (value != null) {
+                    log.info("用户抢到红包了，userId=[{}],redPacket=[{}],amount=[{}]", userId, redPacket, value);
+                    // 当前用户抢到一个红包，更新缓存，并记录到数据库
+                    String redPacketTotalKey = redPacket + ":total";
+                    // 更新缓存中剩余红包个数
+                    Integer curTotal = valueOperations.get(redPacketTotalKey) != null ? (Integer) valueOperations.get(redPacketTotalKey) : 0;
+                    valueOperations.set(redPacketTotalKey, curTotal - 1);
 
-                // 将抢红包记录写入数据库-异步
-                redService.recordRobRedPacket(userId, redPacket, new BigDecimal(value.toString()));
+                    // 将当前抢到红包的用户设置到缓存，用于表示当前用户已经抢过红包了
+                    valueOperations.set(redPacket + ":" + userId + ":rob", value, 24L, TimeUnit.HOURS);
 
-                return new BigDecimal(value.toString());
+                    // 将抢红包记录写入数据库-异步
+                    redService.recordRobRedPacket(userId, redPacket, new BigDecimal(value.toString()));
+
+                    return new BigDecimal(value.toString());
+                }
             }
         }
 
